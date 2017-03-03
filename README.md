@@ -13,3 +13,5 @@ It will then create a snapshot of the Volume, name the snapshot after the Instan
 Then it compares the actual date with the "DeleteOn" Tag of the existing snapshots and deletes the one wich are out of the retention span.
 Disclaimer: If you have a large number of Instances and/or snapshots, I cannot guarantee that you won't hit any Lambda timeouts. With just a few Instances you should be fine.
 Disclaimer II: As with every mechanism where you take a snapshot of a running machine, nobody can guarantee that the snapshots are absolutely consistent. So be aware that this is not a 100% secure way to take snapshots especially when you have a high load application. Amazon advises you to unmount root volumes before taking a snapshot, see here http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ebs-creating-snapshot.html
+
+#TODO - based on the ebs_bckup repository I plan to implement a backup to a different AWS region for selected snapshots. 
