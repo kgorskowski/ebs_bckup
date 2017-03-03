@@ -1,0 +1,75 @@
+# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+# LAMBDA variables
+# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+
+variable "cron_expression"    {}
+variable "unique_name"        {}
+variable "stack_prefix"       {}
+variable "lambda_file"        {}
+variable "vars_ini_render"    {}
+variable "aws_iam_role_arn"   {}
+
+
+resource "null_resource" "buildlambdazip" {
+  triggers { key = "${uuid()}" }
+  provisioner "local-exec" {
+    command = <<EOF
+    mkdir lambda && mkdir tmp
+    cp ebs_bckup/ebs_bckup.py tmp/ebs_bckup.py
+    echo "${var.vars_ini_render}" > tmp/vars.ini
+EOF
+  }
+}
+data "archive_file" "lambda_zip" {
+  type        = "zip"
+  source_dir  = "tmp"
+  output_path = "lambda/${var.stack_prefix}-${var.unique_name}.zip"
+  depends_on  = ["null_resource.buildlambdazip"]
+}
+
+# Create lambda function
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+resource "aws_lambda_function" "ebs_bckup_lambda" {
+  function_name     = "${var.stack_prefix}_lambda_${var.unique_name}"
+  filename          = "${var.lambda_file}"
+  source_code_hash  = "${data.archive_file.lambda_zip.output_base64sha256}"
+  role              = "${var.aws_iam_role_arn}"
+  runtime           = "python2.7"
+  handler           = "ebs_bckup.lambda_handler"
+  timeout           = "60"
+  publish           = true
+  depends_on        = ["null_resource.buildlambdazip"]
+}
+
+# Run the function with CloudWatch Event cronlike scheduler
+
+resource "aws_cloudwatch_event_rule" "ebs_bckup_timer" {
+  name = "${var.stack_prefix}_ebs_bckup_event_${var.unique_name}"
+  description = "Cronlike scheduled Cloudwatch Event for creating and deleting EBS Snapshots"
+  schedule_expression = "cron(${var.cron_expression})"
+}
+
+# Assign event to Lambda target
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+resource "aws_cloudwatch_event_target" "run_ebs_bckup_lambda" {
+    rule = "${aws_cloudwatch_event_rule.ebs_bckup_timer.name}"
+    target_id = "ebs_bckup_lambda"
+    arn = "${aws_lambda_function.ebs_bckup_lambda.arn}"
+}
+
+# Allow lambda to be called from cloudwatch
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+resource "aws_lambda_permission" "allow_cloudwatch_to_call" {
+  statement_id = "${var.stack_prefix}_AllowExecutionFromCloudWatch_${var.unique_name}"
+  action = "lambda:InvokeFunction"
+  function_name = "${aws_lambda_function.ebs_bckup_lambda.function_name}"
+  principal = "events.amazonaws.com"
+  source_arn = "${aws_cloudwatch_event_rule.ebs_bckup_timer.arn}"
+}
+
+output "lambda_function_name" {
+  value = "${aws_lambda_function.ebs_bckup_lambda.function_name}"
+}

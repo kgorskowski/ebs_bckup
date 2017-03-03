@@ -1,0 +1,29 @@
+#
+# Use this file to configure EBS Backup Lambda function
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Copy to "terraform.tfstate" and fill in your Variables
+
+
+# AWS related variables
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+AWS_REGION        = "eu-central-1"      # Lambda Function will be created/will run in this region
+
+# Set you AWS Credentials here or in environment variables
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+#AWS_ACCESS_KEY    = "XXXXXXXXXXXXXXX"
+#AWS_SECRET_KEY    = "YxYxYxYxYxYxYxYxYxYxYxYxYxYxYxYxY"
+
+
+# AWS_SOURCE_REGION = "eu-central-1"     # source region can be extracted from Lambda Event
+# AWS_DEST_REGION   = "eu-west-1"        # copy to different region is tbd
+
+# general Variables for the Lambda function
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+EC2_INSTANCE_TAG  = "Instance Tag to identified the Backup Targets"
+RETENTION_DAYS    = 5                    # how many days should EBS snapshots be stored
+cron_expression   = "30 2 * * ? *"       # run daily at 2.30am (check AWS documentation for your own configuration)
+stack_prefix      = "ebs_bckup"          # Used for resource names (prefix-resourcename)
+unique_name       = "v1"                 # Random name for this build.
