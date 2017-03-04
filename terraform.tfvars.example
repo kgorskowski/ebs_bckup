@@ -24,7 +24,7 @@ AWS_REGION        = "eu-central-1"      # Lambda Function will be created/will r
 
 EC2_INSTANCE_TAG  = "Backup"                        # Your Instances should have a Tag (name doesn't matter) with the value "Backup"
 RETENTION_DAYS    = 5                               # how many days should EBS snapshots be stored
-REGIONS           = ["eu-west-1", "eu-central-1"]   # define the target regions in wich the Lambda should run
+REGIONS           = ["eu-west-1", "eu-central-1"]   # define the target regions in wich the Lambda should create snapshots
 
 cron_expression   = "30 2 * * ? *"                  # run daily at 2.30am (check AWS documentation for your own configuration)
 stack_prefix      = "ebs_bckup"                     # Used for resource names (prefix-resourcename)
