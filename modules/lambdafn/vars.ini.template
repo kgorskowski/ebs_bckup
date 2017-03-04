@@ -1,3 +1,5 @@
 [main]
 EC2_INSTANCE_TAG = ${EC2_INSTANCE_TAG}
 RETENTION_DAYS   = ${RETENTION_DAYS}
+[regions]
+regionList = ${REGIONS}

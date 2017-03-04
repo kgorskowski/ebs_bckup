@@ -23,3 +23,7 @@ variable "stack_prefix" {
 variable "cron_expression" {
   description = "Cron expression for firing up the Lambda Function"
 }
+
+variable "REGIONS" {
+  type = "list"
+}

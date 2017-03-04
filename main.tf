@@ -15,6 +15,7 @@ data "template_file" "vars" {
     vars {
       EC2_INSTANCE_TAG                   = "${var.EC2_INSTANCE_TAG}"
       RETENTION_DAYS                     = "${var.RETENTION_DAYS}"
+      REGIONS                            = "${join(",", var.REGIONS)}"
     }
 }
 
