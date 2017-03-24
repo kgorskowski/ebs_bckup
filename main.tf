@@ -3,7 +3,7 @@
 
 resource "aws_iam_role" "ebs_bckup-role-lambdarole" {
   name               = "${var.stack_prefix}-role-lambdarole-${var.unique_name}"
-  assume_role_policy = "${file("./files/lambdarole.json")}"
+  assume_role_policy = "${file("${path.module}/files/lambdarole.json")}"
 }
 
 # Apply the Policy Document we just created
@@ -12,7 +12,7 @@ resource "aws_iam_role" "ebs_bckup-role-lambdarole" {
 resource "aws_iam_role_policy" "ebs_bckup-role-lambdapolicy" {
   name = "${var.stack_prefix}-role-lambdapolicy-${var.unique_name}"
   role = "${aws_iam_role.ebs_bckup-role-lambdarole.id}"
-  policy = "${file("./files/lambdapolicy.json")}"
+  policy = "${file("${path.module}/files/lambdapolicy.json")}"
 }
 
 # Output the ARN of the lambda role
@@ -21,7 +21,7 @@ resource "aws_iam_role_policy" "ebs_bckup-role-lambdapolicy" {
 # Render vars.ini for Lambda function
 
 data "template_file" "vars" {
-    template = "${file("./files/vars.ini.template")}"
+    template = "${file("${path.module}/files/vars.ini.template")}"
     vars {
       EC2_INSTANCE_TAG                   = "${var.EC2_INSTANCE_TAG}"
       RETENTION_DAYS                     = "${var.RETENTION_DAYS}"
