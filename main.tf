@@ -1,17 +1,27 @@
-# MAIN Terraform File
+# Create the lambda role (using lambdarole.json file)
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-# Create Lambda Role
-
-module "iamrole" {
-  source     	  = "modules/iamrole"
-  unique_name	  = "${var.unique_name}"
-  stack_prefix  = "${var.stack_prefix}"
+resource "aws_iam_role" "ebs_bckup-role-lambdarole" {
+  name               = "${var.stack_prefix}-role-lambdarole-${var.unique_name}"
+  assume_role_policy = "${file("./files/lambdarole.json")}"
 }
+
+# Apply the Policy Document we just created
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+resource "aws_iam_role_policy" "ebs_bckup-role-lambdapolicy" {
+  name = "${var.stack_prefix}-role-lambdapolicy-${var.unique_name}"
+  role = "${aws_iam_role.ebs_bckup-role-lambdarole.id}"
+  policy = "${file("./files/lambdapolicy.json")}"
+}
+
+# Output the ARN of the lambda role
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 # Render vars.ini for Lambda function
 
 data "template_file" "vars" {
-    template = "${file("modules/lambdafn/vars.ini.template")}"
+    template = "${file("./files/vars.ini.template")}"
     vars {
       EC2_INSTANCE_TAG                   = "${var.EC2_INSTANCE_TAG}"
       RETENTION_DAYS                     = "${var.RETENTION_DAYS}"
@@ -19,14 +29,63 @@ data "template_file" "vars" {
     }
 }
 
-# Build and Create Lambda resources
 
-module "lambdafn" {
-  source        	   = "modules/lambdafn"
-  unique_name   	   = "${var.unique_name}"
-  lambda_file        = "lambda/${var.stack_prefix}-${var.unique_name}.zip"
-  stack_prefix       = "${var.stack_prefix}"
-  aws_iam_role_arn   = "${module.iamrole.aws_iam_role_arn}"
-  vars_ini_render    = "${data.template_file.vars.rendered}"
-  cron_expression    = "${var.cron_expression}"
+resource "null_resource" "buildlambdazip" {
+  triggers { key = "${uuid()}" }
+  provisioner "local-exec" {
+    command = <<EOF
+    mkdir lambda && mkdir tmp
+    cp ebs_bckup/ebs_bckup.py tmp/ebs_bckup.py
+    echo "${data.template_file.vars.rendered}" > tmp/vars.ini
+EOF
+  }
+}
+data "archive_file" "lambda_zip" {
+  type        = "zip"
+  source_dir  = "tmp"
+  output_path = "lambda/${var.stack_prefix}-${var.unique_name}.zip"
+  depends_on  = ["null_resource.buildlambdazip"]
+}
+
+# Create lambda function
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+resource "aws_lambda_function" "ebs_bckup_lambda" {
+  function_name     = "${var.stack_prefix}_lambda_${var.unique_name}"
+  filename          = "lambda/${var.stack_prefix}-${var.unique_name}.zip"
+  source_code_hash  = "${data.archive_file.lambda_zip.output_base64sha256}"
+  role              = "${aws_iam_role.ebs_bckup-role-lambdarole.arn}"
+  runtime           = "python2.7"
+  handler           = "ebs_bckup.lambda_handler"
+  timeout           = "60"
+  publish           = true
+  depends_on        = ["null_resource.buildlambdazip"]
+}
+
+# Run the function with CloudWatch Event cronlike scheduler
+
+resource "aws_cloudwatch_event_rule" "ebs_bckup_timer" {
+  name = "${var.stack_prefix}_ebs_bckup_event_${var.unique_name}"
+  description = "Cronlike scheduled Cloudwatch Event for creating and deleting EBS Snapshots"
+  schedule_expression = "cron(${var.cron_expression})"
+}
+
+# Assign event to Lambda target
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+resource "aws_cloudwatch_event_target" "run_ebs_bckup_lambda" {
+    rule = "${aws_cloudwatch_event_rule.ebs_bckup_timer.name}"
+    target_id = "${aws_lambda_function.ebs_bckup_lambda.id}"
+    arn = "${aws_lambda_function.ebs_bckup_lambda.arn}"
+}
+
+# Allow lambda to be called from cloudwatch
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+resource "aws_lambda_permission" "allow_cloudwatch_to_call" {
+  statement_id = "${var.stack_prefix}_AllowExecutionFromCloudWatch_${var.unique_name}"
+  action = "lambda:InvokeFunction"
+  function_name = "${aws_lambda_function.ebs_bckup_lambda.function_name}"
+  principal = "events.amazonaws.com"
+  source_arn = "${aws_cloudwatch_event_rule.ebs_bckup_timer.arn}"
 }
