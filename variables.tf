@@ -22,6 +22,6 @@ variable "cron_expression" {
   description = "Cron expression for firing up the Lambda Function"
 }
 
-variable "REGIONS" {
+variable "regions" {
   type = "list"
 }

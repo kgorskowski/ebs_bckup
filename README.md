@@ -1,17 +1,31 @@
-Hi.
-Here comes my next experiments in Lambda and Terraform.
-This is based on this blogpost https://serverlesscode.com/post/lambda-schedule-ebs-snapshot-backups-2/
-and again I take no credit for the idea and/or the code.
-I just wanted to make this more portable and more easily reproducable.
-That's about it.
-If you like it, install Terraform, clone the repo, copy the the .example file to terraform.tfvars and fill in your variables.
-Then you run "terraform get" to initialize the modules, "terraform plan" to see what resources will be created and if you are fine with it, finally "terraform apply" to create the resources.
-To use this script, you need to add a Tag with the value "Backup" to the Instances you want to be targeted by the Function. The Name of the Tag doesn't matter, but if your Instance is not tagged, it will be ignored and no snapshot will be created.
+# tf\_ebs\_bckup
+## a Lambda-powered EBS Snapshot Terraform Module
 
-The Lambda function is triggered by a scheduled CloudWatch event. It looks for all Instances with the "Backup"-Tag, then checks the matching Instances for mounted EBS Volumes.
-It will then create a snapshot of the Volume, name the snapshot after the Instance ID and the day the snapshot was taken and add the "DeleteOn" Tag with the expiration date of the snapshot.
-Then it compares the actual date with the "DeleteOn" Tag of the existing snapshots and deletes the one wich are out of the retention span.
-Disclaimer: If you have a large number of Instances and/or snapshots, I cannot guarantee that you won't hit any Lambda timeouts. With just a few Instances you should be fine.
-Disclaimer II: As with every mechanism where you take a snapshot of a running machine, nobody can guarantee that the snapshots are absolutely consistent. So be aware that this is not a 100% secure way to take snapshots especially when you have a high load application. Amazon advises you to unmount root volumes before taking a snapshot, see here http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ebs-creating-snapshot.html
-EDIT: Cross Region Backup is now enabled by providing the target region as a list in your teraform.tfvars file.
-TODO - based on the ebs_bckup repository I plan to implement a backup to a different AWS region for selected snapshots.
+A Terraform module for creating a Lambda Function that takes automatic snapshots of of all connected EBS volumes of correspondingly tagged instances.
+The function is triggered via a CloudWatch event that can be freely configured by a cronlike expression.
+
+## Input Variables:
+- `EC2_INSTANCE_TAG` - All instances with this tag be backed up. Default is `"Backup"`
+- `RETENTION_DAYS`   - Number of day the created EBS Snapshots will be stored, defaults to `5`
+- `unique_name`      - Just a marker for the Terraform stack. Default is "v1"`
+- `stack_prefix`     - Prefix for resource generation. Default is `ebs_bckup`
+- `cron_expression`  - Cron expression for CloudWatch events. Default is `"22 1 * * ? *"`
+- `regions`          - List of regions in which the Lambda function should run. Requires at least one entry (eg. `["eu-west-1", "us-west-1"]`)
+
+## Outputs
+Default outputs are `aws_iam_role_arn` with the value of the created IAM role for the Lambda function and the `lambda_function_name`
+
+## Example usage
+In your Terrafom `main.tf` call the module with the required variables.
+
+```
+module "ebs_bckup" {
+  source = "github.com/kgorskowski/terraform/modules//tf_ebs_bckup"
+  EC2_INSTANCE_TAG = "Backup"
+  RETENTION_DAYS   = 10
+  unique_name      = "v2"
+  stack_prefix     = "ebs_snapshot"
+  cron_expression  = "45 1 * * ? *"
+  regions          = ["eu-west-1", "eu-central-1"]
+}
+```
