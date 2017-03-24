@@ -35,7 +35,7 @@ resource "null_resource" "buildlambdazip" {
   provisioner "local-exec" {
     command = <<EOF
     mkdir -p ${path.module}/lambda && mkdir -p ${path.module}/tmp
-    cp -u ${path.module}/ebs_bckup/ebs_bckup.py ${path.module}/tmp/ebs_bckup.py
+    cp ${path.module}/ebs_bckup/ebs_bckup.py ${path.module}/tmp/ebs_bckup.py
     echo "${data.template_file.vars.rendered}" > ${path.module}/tmp/vars.ini
 EOF
   }
