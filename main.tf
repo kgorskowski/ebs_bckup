@@ -42,7 +42,7 @@ EOF
 }
 data "archive_file" "lambda_zip" {
   type        = "zip"
-  source_dir  = "${.path.module}/tmp"
+  source_dir  = "${path.module}/tmp"
   output_path = "${path.module}/lambda/${var.stack_prefix}-${var.unique_name}.zip"
   depends_on  = ["null_resource.buildlambdazip"]
 }
