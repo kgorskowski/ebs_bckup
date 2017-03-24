@@ -1,10 +1,7 @@
 # declare necessary variables
 
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-variable "AWS_REGION" {
-  description = "AWS Region where the Lambda function shall run"
-}
 variable "EC2_INSTANCE_TAG" {
+  default     = "Backup"
   description = "Tag to identify the EC2 target instances of the Lambda Function"
 }
 variable "RETENTION_DAYS" {
@@ -12,6 +9,7 @@ variable "RETENTION_DAYS" {
   description = "Numbers of Days that the EBS Snapshots will be stored (INT)"
 }
 variable "unique_name" {
+  default = "v1"
   description = "Enter Unique Name to identify the Terraform Stack (lowercase)"
 }
 
@@ -24,6 +22,6 @@ variable "cron_expression" {
   description = "Cron expression for firing up the Lambda Function"
 }
 
-variable "REGIONS" {
+variable "regions" {
   type = "list"
 }
