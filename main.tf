@@ -33,11 +33,7 @@ data "template_file" "vars" {
 resource "null_resource" "buildlambdazip" {
   triggers { key = "${uuid()}" }
   provisioner "local-exec" {
-    command = <<EOF
-    mkdir lambda && mkdir tmp
-    cp ebs_bckup/ebs_bckup.py tmp/ebs_bckup.py
-    echo "${data.template_file.vars.rendered}" > tmp/vars.ini
-EOF
+    command = "mkdir -p ${path.module}/lambda && mkdir -P  ${path.module}/tmp && cp  ${path.module}/ebs_bckup/ebs_bckup.py  ${path.module}/tmp/ebs_bckup.py && echo ${data.template_file.vars.rendered} >  ${path.module}/tmp/vars.ini"
   }
 }
 data "archive_file" "lambda_zip" {
