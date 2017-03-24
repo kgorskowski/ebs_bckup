@@ -33,13 +33,17 @@ data "template_file" "vars" {
 resource "null_resource" "buildlambdazip" {
   triggers { key = "${uuid()}" }
   provisioner "local-exec" {
-    command = "mkdir -p ${path.module}/lambda && mkdir -p  ${path.module}/tmp && cp  ${path.module}/ebs_bckup/ebs_bckup.py  ${path.module}/tmp/ebs_bckup.py && echo ${data.template_file.vars.rendered} >  ${path.module}/tmp/vars.ini"
+    command = <<EOF
+    mkdir ${path.module}/lambda && mkdir ${path.module}/tmp
+    cp ${path.module}/ebs_bckup/ebs_bckup.py ${path.module}/tmp/ebs_bckup.py
+    echo "${data.template_file.vars.rendered}" > ${path.module}/tmp/vars.ini
+EOF
   }
 }
 data "archive_file" "lambda_zip" {
   type        = "zip"
   source_dir  = "tmp"
-  output_path = "lambda/${var.stack_prefix}-${var.unique_name}.zip"
+  output_path = "${path.module}/lambda/${var.stack_prefix}-${var.unique_name}.zip"
   depends_on  = ["null_resource.buildlambdazip"]
 }
 
@@ -48,7 +52,7 @@ data "archive_file" "lambda_zip" {
 
 resource "aws_lambda_function" "ebs_bckup_lambda" {
   function_name     = "${var.stack_prefix}_lambda_${var.unique_name}"
-  filename          = "lambda/${var.stack_prefix}-${var.unique_name}.zip"
+  filename          = "${path.module}/lambda/${var.stack_prefix}-${var.unique_name}.zip"
   source_code_hash  = "${data.archive_file.lambda_zip.output_base64sha256}"
   role              = "${aws_iam_role.ebs_bckup-role-lambdarole.arn}"
   runtime           = "python2.7"
