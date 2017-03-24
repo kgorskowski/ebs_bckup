@@ -34,15 +34,15 @@ resource "null_resource" "buildlambdazip" {
   triggers { key = "${uuid()}" }
   provisioner "local-exec" {
     command = <<EOF
-    mkdir ${path.module}/lambda && mkdir ${path.module}/tmp
-    cp ${path.module}/ebs_bckup/ebs_bckup.py ${path.module}/tmp/ebs_bckup.py
+    mkdir -p ${path.module}/lambda && mkdir -p ${path.module}/tmp
+    cp -u ${path.module}/ebs_bckup/ebs_bckup.py ${path.module}/tmp/ebs_bckup.py
     echo "${data.template_file.vars.rendered}" > ${path.module}/tmp/vars.ini
 EOF
   }
 }
 data "archive_file" "lambda_zip" {
   type        = "zip"
-  source_dir  = "tmp"
+  source_dir  = "${.path.module}/tmp"
   output_path = "${path.module}/lambda/${var.stack_prefix}-${var.unique_name}.zip"
   depends_on  = ["null_resource.buildlambdazip"]
 }
