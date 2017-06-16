@@ -4,7 +4,5 @@ terraform.tfstate.backup
 .terraform
 key.pub
 key
-tmp
-tmp/*
 lambda
-lambda/*
+lambda-*
