@@ -31,8 +31,6 @@ def lambda_handler(event, context):
                 for r in reservations
                 ], [])
 
-        to_tag = collections.defaultdict(list)
-
         for instance in instances:
             for dev in instance['BlockDeviceMappings']:
                 if dev.get('Ebs', None) is None:
@@ -40,26 +38,28 @@ def lambda_handler(event, context):
                     continue
                 vol_id = dev['Ebs']['VolumeId']
                 instance_id=instance['InstanceId']
+                instance_name = ''
+                for tags in instance['Tags']:
+                    if tags["Key"] == 'Name':
+                        instance_name = tags["Value"]
                 print("Found EBS Volume %s on Instance %s, creating Snapshot" % (vol_id, instance['InstanceId']))
                 snap = ec.create_snapshot(
-                    Description="Snapshot of Instance %s" % instance_id,
+                    Description="Snapshot of Instance %s (%s) %s" % (instance_id, instance_name, dev['DeviceName']),
                     VolumeId=vol_id,
                 )
-                to_tag[retention_days].append(snap['SnapshotId'])
-
-                for retention_days in to_tag.keys():
-                    delete_date = datetime.date.today() + datetime.timedelta(days=retention_days)
-                    snap = snap['Description'] + str('_')
-                    snapshot = snap + str(datetime.date.today())
-                    delete_fmt = delete_date.strftime('%Y-%m-%d')
-                    ec.create_tags(
-                    Resources=to_tag[retention_days],
-                    Tags=[
-                    {'Key': 'DeleteOn', 'Value': delete_fmt},
-                    {'Key': 'Name', 'Value': snapshot}
-                    ]
-                    )
-            to_tag.clear()
+                snapshot = "%s_%s" % (snap['Description'], str(datetime.date.today()))
+                delete_date = datetime.date.today() + datetime.timedelta(days=retention_days)
+                delete_fmt = delete_date.strftime('%Y-%m-%d')
+                ec.create_tags(
+                Resources=[snap['SnapshotId']],
+                Tags=[
+                {'Key': 'DeleteOn', 'Value': delete_fmt},
+                {'Key': 'Name', 'Value': snapshot},
+                {'Key': 'InstanceId', 'Value': instance_id},
+                {'Key': 'InstanceName', 'Value': instance_name},
+                {'Key': 'DeviceName', 'Value': dev['DeviceName']}
+                ]
+                )
 
         delete_on = datetime.date.today().strftime('%Y-%m-%d')
         filters = [
