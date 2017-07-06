@@ -9,7 +9,7 @@ The function is triggered via a CloudWatch event that can be freely configured b
 - `RETENTION_DAYS`   - Number of day the created EBS Snapshots will be stored, defaults to `5`
 - `unique_name`      - Just a marker for the Terraform stack. Default is "v1"`
 - `stack_prefix`     - Prefix for resource generation. Default is `ebs_bckup`
-- `cron_expression`  - Cron expression for CloudWatch events. Default is `"22 1 * * ? *"`
+- `cron_expression`  - Cron expression for CloudWatch events. Required.
 - `regions`          - List of regions in which the Lambda function should run. Requires at least one entry (eg. `["eu-west-1", "us-west-1"]`)
 
 ## Outputs
