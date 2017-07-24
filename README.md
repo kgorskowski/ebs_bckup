@@ -20,7 +20,7 @@ In your Terrafom `main.tf` call the module with the required variables.
 
 ```
 module "ebs_bckup" {
-  source = "github.com/kgorskowski/terraform/modules//tf_ebs_bckup"
+  source = "github.com/kgorskowski/ebs_bckup"
   EC2_INSTANCE_TAG = "Backup"
   RETENTION_DAYS   = 10
   unique_name      = "v2"
