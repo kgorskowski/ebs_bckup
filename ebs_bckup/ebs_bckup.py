@@ -15,6 +15,9 @@ def lambda_handler(event, context):
     regionsList = regionsStrg.split(',')
     EC2_INSTANCE_TAG = config.get('main', 'EC2_INSTANCE_TAG')
     retention_days = config.getint('main', 'RETENTION_DAYS')
+    tags_to_copy_str = config.get('main', 'TAGS_TO_COPY')
+    tags_to_copy = set(tags_to_copy_str.split(','))
+
     for r in regionsList:
         aws_region = r
         print("Checking Region %s" % aws_region)
@@ -39,9 +42,12 @@ def lambda_handler(event, context):
                 vol_id = dev['Ebs']['VolumeId']
                 instance_id=instance['InstanceId']
                 instance_name = ''
+                instance_tags = []
                 for tags in instance['Tags']:
                     if tags["Key"] == 'Name':
                         instance_name = tags["Value"]
+                    elif tags["Key"] in tags_to_copy:
+                         instance_tags += [tags]
                 print("Found EBS Volume %s on Instance %s, creating Snapshot" % (vol_id, instance['InstanceId']))
                 snap = ec.create_snapshot(
                     Description="Snapshot of Instance %s (%s) %s" % (instance_id, instance_name, dev['DeviceName']),
@@ -52,7 +58,7 @@ def lambda_handler(event, context):
                 delete_fmt = delete_date.strftime('%Y-%m-%d')
                 ec.create_tags(
                 Resources=[snap['SnapshotId']],
-                Tags=[
+                Tags = instance_tags + [
                 {'Key': 'DeleteOn', 'Value': delete_fmt},
                 {'Key': 'Name', 'Value': snapshot},
                 {'Key': 'InstanceId', 'Value': instance_id},

@@ -8,6 +8,10 @@ variable "RETENTION_DAYS" {
   default = 5
   description = "Numbers of Days that the EBS Snapshots will be stored (INT)"
 }
+variable "TAGS_TO_COPY" {
+  default = []
+  description = "Tags to copy from the EBS Volume to the snapshot"
+}
 variable "unique_name" {
   default = "v1"
   description = "Enter Unique Name to identify the Terraform Stack (lowercase)"
