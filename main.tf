@@ -61,6 +61,8 @@ resource "aws_lambda_function" "ebs_bckup_lambda" {
   timeout           = "60"
   publish           = true
   depends_on        = ["null_resource.buildlambdazip"]
+
+  tags = "${var.tags}"
 }
 
 # Run the function with CloudWatch Event cronlike scheduler
@@ -75,9 +77,9 @@ resource "aws_cloudwatch_event_rule" "ebs_bckup_timer" {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 resource "aws_cloudwatch_event_target" "run_ebs_bckup_lambda" {
-    rule = "${aws_cloudwatch_event_rule.ebs_bckup_timer.name}"
-    target_id = "${aws_lambda_function.ebs_bckup_lambda.id}"
-    arn = "${aws_lambda_function.ebs_bckup_lambda.arn}"
+  rule = "${aws_cloudwatch_event_rule.ebs_bckup_timer.name}"
+  target_id = "${aws_lambda_function.ebs_bckup_lambda.id}"
+  arn = "${aws_lambda_function.ebs_bckup_lambda.arn}"
 }
 
 # Allow lambda to be called from cloudwatch
