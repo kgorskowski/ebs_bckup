@@ -29,3 +29,8 @@ module "ebs_bckup" {
   regions          = ["eu-west-1", "eu-central-1"]
 }
 ```
+## Update
+As AWS now offers a EBS Snapshot Lifecycle mechanism I would recommend this solution as the latest state of the art.
+https://aws.amazon.com/de/blogs/aws/new-lifecycle-management-for-amazon-ebs-snapshots/
+Implementation in Terraform pending
+https://github.com/terraform-providers/terraform-provider-aws/pull/5558
