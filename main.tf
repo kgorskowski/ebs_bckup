@@ -26,6 +26,7 @@ data "template_file" "vars" {
       EC2_INSTANCE_TAG                   = "${var.EC2_INSTANCE_TAG}"
       RETENTION_DAYS                     = "${var.RETENTION_DAYS}"
       REGIONS                            = "${join(",", var.regions)}"
+      TAGS_TO_COPY                       = "${join(",", var.TAGS_TO_COPY)}"
     }
 }
 
@@ -34,16 +35,16 @@ resource "null_resource" "buildlambdazip" {
   triggers { key = "${uuid()}" }
   provisioner "local-exec" {
     command = <<EOF
-    mkdir -p ${path.module}/lambda && mkdir -p ${path.module}/tmp
-    cp ${path.module}/ebs_bckup/ebs_bckup.py ${path.module}/tmp/ebs_bckup.py
-    echo "${data.template_file.vars.rendered}" > ${path.module}/tmp/vars.ini
+    mkdir -p ${path.root}/lambda && mkdir -p ${path.root}/tmp
+    cp ${path.module}/ebs_bckup/ebs_bckup.py ${path.root}/tmp/ebs_bckup.py
+    echo "${data.template_file.vars.rendered}" > ${path.root}/tmp/vars.ini
 EOF
   }
 }
 data "archive_file" "lambda_zip" {
   type        = "zip"
-  source_dir  = "${path.module}/tmp"
-  output_path = "${path.module}/lambda/${var.stack_prefix}-${var.unique_name}.zip"
+  source_dir  = "${path.root}/tmp"
+  output_path = "${path.root}/lambda/${var.stack_prefix}-${var.unique_name}.zip"
   depends_on  = ["null_resource.buildlambdazip"]
 }
 
@@ -52,7 +53,7 @@ data "archive_file" "lambda_zip" {
 
 resource "aws_lambda_function" "ebs_bckup_lambda" {
   function_name     = "${var.stack_prefix}_lambda_${var.unique_name}"
-  filename          = "${path.module}/lambda/${var.stack_prefix}-${var.unique_name}.zip"
+  filename          = "${path.root}/lambda/${var.stack_prefix}-${var.unique_name}.zip"
   source_code_hash  = "${data.archive_file.lambda_zip.output_base64sha256}"
   role              = "${aws_iam_role.ebs_bckup-role-lambdarole.arn}"
   runtime           = "python2.7"
@@ -60,6 +61,8 @@ resource "aws_lambda_function" "ebs_bckup_lambda" {
   timeout           = "60"
   publish           = true
   depends_on        = ["null_resource.buildlambdazip"]
+
+  tags = "${var.tags}"
 }
 
 # Run the function with CloudWatch Event cronlike scheduler
@@ -74,9 +77,9 @@ resource "aws_cloudwatch_event_rule" "ebs_bckup_timer" {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 resource "aws_cloudwatch_event_target" "run_ebs_bckup_lambda" {
-    rule = "${aws_cloudwatch_event_rule.ebs_bckup_timer.name}"
-    target_id = "${aws_lambda_function.ebs_bckup_lambda.id}"
-    arn = "${aws_lambda_function.ebs_bckup_lambda.arn}"
+  rule = "${aws_cloudwatch_event_rule.ebs_bckup_timer.name}"
+  target_id = "${aws_lambda_function.ebs_bckup_lambda.id}"
+  arn = "${aws_lambda_function.ebs_bckup_lambda.arn}"
 }
 
 # Allow lambda to be called from cloudwatch
